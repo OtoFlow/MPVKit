@@ -8,7 +8,7 @@ let package = Package(
     products: [
         .library(
             name: "MPVKit",
-            targets: ["_MPVKit"]
+            targets: ["_MPVKit", "MPVPlayer"]
         ),
         .library(
             name: "MPVKit-GPL",
@@ -16,6 +16,13 @@ let package = Package(
         ),
     ],
     targets: [
+        .target(
+            name: "MPVPlayer",
+            dependencies: [
+                "_MPVKit",
+            ],
+            path: "Sources/MPVKit/MPVPlayer"
+        ),
         .target(
             name: "_MPVKit",
             dependencies: [
