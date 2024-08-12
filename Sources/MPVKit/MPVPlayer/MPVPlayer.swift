@@ -1,15 +1,13 @@
 import Foundation
-import CoreMedia
-import QuartzCore
 import Libmpv
 
 open class MPVPlayer: PlayerType {
 
-    var mpv: OpaquePointer!
+    public private(set) var mpv: OpaquePointer!
 
-    lazy var command = Commandant(self)
+    public lazy var command = Commandant(self)
 
-    public var metalLayer: CAMetalLayer? {
+    public var metalLayer: MetalLayer? {
         didSet {
             if metalLayer != nil {
                 mpv_set_option(mpv, "wid", MPV_FORMAT_INT64, &metalLayer)
@@ -40,13 +38,33 @@ open class MPVPlayer: PlayerType {
 
     open weak var delegate: Delegate?
 
-    lazy var queue = DispatchQueue(label: "mpv", qos: .userInitiated)
+    open lazy var queue = DispatchQueue(label: "mpv", qos: .userInitiated)
 
     public init() {
         setupMpv()
     }
 
-    private func setupMpv() {
+    open func loadFile(url: URL) {
+        command.loadfile(url.absoluteString, "replace")
+    }
+
+    open func play() {
+        setProperty(.PlaybackControl.$pause, value: false)
+    }
+
+    open func pause() {
+        setProperty(.PlaybackControl.$pause, value: true)
+    }
+
+    public func seek(to seconds: TimeInterval) {
+        command.seek("\(seconds)", "absolute")
+    }
+
+    public func seek(by seconds: TimeInterval) {
+        command.seek("\(seconds)")
+    }
+
+    open func setupMpv() {
         mpv = mpv_create()
 
         mpv_set_option_string(mpv, "subs-match-os-language", "yes")
@@ -59,7 +77,9 @@ open class MPVPlayer: PlayerType {
 
         mpv_initialize(mpv)
 
-        observe(property: Options.PlaybackControl.$pause)
+        observe(property: .PlaybackControl.$pause)
+        observe(property: .$pausedForCache)
+        observe(property: .$videoParamsSigPeak)
 
         mpv_set_wakeup_callback(mpv, { ctx in
             let player = unsafeBitCast(ctx, to: MPVPlayer.self)
@@ -67,31 +87,7 @@ open class MPVPlayer: PlayerType {
         }, Unmanaged.passUnretained(self).toOpaque())
     }
 
-    public func loadFile(url: URL) {
-        command.loadfile(url.absoluteString, "replace")
-    }
-
-    public func play() {
-        setProperty(.PlaybackControl.$pause, value: false)
-    }
-
-    public func pause() {
-        setProperty(.PlaybackControl.$pause, value: true)
-    }
-
-    public func addPeriodicTimeObserver(forInterval interval: TimeInterval, using block: @escaping @Sendable (TimeInterval) -> Void) -> Timer {
-        let timer = Timer(timeInterval: interval, repeats: true) { timer in
-            block(interval)
-        }
-        RunLoop.current.add(timer, forMode: .common)
-        return timer
-    }
-
-    public func removeTimeObserver(_ observer: Timer) {
-        observer.invalidate()
-    }
-
-    func handlePropertyChange(_ name: String, _ property: mpv_event_property) {
+    open func handlePropertyChange(_ name: String, _ property: mpv_event_property) {
         switch name {
         case Options.PlaybackControl.pause:
             guard let paused = UnsafePointer<Bool>(OpaquePointer(property.data))?.pointee else {
@@ -102,12 +98,13 @@ open class MPVPlayer: PlayerType {
         }
     }
 
-    func handleEvent(_ event: UnsafePointer<mpv_event>) {
+    open func handleEvent(_ event: UnsafePointer<mpv_event>) {
         let eventId = event.pointee.event_id
 
         switch eventId {
         case MPV_EVENT_SHUTDOWN:
-            ()
+            mpv_terminate_destroy(mpv)
+            mpv = nil
         case MPV_EVENT_LOG_MESSAGE:
             ()
         case MPV_EVENT_COMMAND_REPLY:
@@ -132,11 +129,17 @@ open class MPVPlayer: PlayerType {
             ()
         case MPV_EVENT_PLAYBACK_RESTART:
             ()
-        default: ()
+        default:
+#if DEBUG
+            let eventName = mpv_event_name(event.pointee.event_id)
+            print("event: \(String(cString: (eventName)!))");
+#else
+            ()
+#endif
         }
     }
 
-    func readEvents() {
+    private func readEvents() {
         queue.async { [weak self] in
             guard let self else { return }
 
@@ -152,9 +155,10 @@ open class MPVPlayer: PlayerType {
     }
 }
 
+// MARK: Property
 extension MPVPlayer {
 
-    private func observe<Property: PropertyType>(property: Property) {
+    private func _observe<Property: PropertyType>(property: Property) {
         mpv_observe_property(mpv, 0, property.name, Property.Value.mpvFormat)
     }
 
@@ -176,6 +180,14 @@ extension MPVPlayer {
         _ = withUnsafeMutablePointer(to: &data) { data in
             mpv_set_property(mpv, property.name, Property.Value.mpvFormat, data)
         }
+    }
+
+    public func observe<Value>(property: Property<Value>) {
+        _observe(property: property)
+    }
+
+    public func observe<Value>(property: Option<Value>) where Value: ValueConvertible {
+        _observe(property: property)
     }
 
     public func getProperty<Value>(_ property: Property<Value>) -> Value {

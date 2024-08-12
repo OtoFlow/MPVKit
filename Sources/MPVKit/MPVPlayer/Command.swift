@@ -11,7 +11,7 @@ extension MPVPlayer {
     @dynamicMemberLookup
     public struct Commandant {
 
-        public struct Exec<Input> {
+        public struct Executor<Input> {
 
             private weak var player: MPVPlayer?
 
@@ -86,7 +86,7 @@ extension MPVPlayer {
             self.player = player
         }
 
-        public subscript<Property, Input>(dynamicMember keyPath: KeyPath<Commands, Property>) -> Exec<Input> where Property == Command<Input> {
+        public subscript<Property, Input>(dynamicMember keyPath: KeyPath<Commands, Property>) -> Executor<Input> where Property == Command<Input> {
             .init(player: player, command: Commands()[keyPath: keyPath])
         }
     }

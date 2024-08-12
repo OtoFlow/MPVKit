@@ -38,10 +38,17 @@ extension MPVPlayer.Properties {
     @Property.Double
     public static var playbackTime = "playback-time"
 
+    /// Whether playback is paused because of waiting for the cache.
+    @Property.Bool
+    public static var pausedForCache = "paused-for-cache"
+
     /// Whether the player is currently seeking, or otherwise trying to restart playback.
     ///
     /// It's possible that it returns yes/true while a file is loaded.
     /// This is because the same underlying code is used for seeking and resyncing.
     @Property.Bool
     public static var seeking = "seeking"
+
+    @Property.Double
+    public static var videoParamsSigPeak = "video-params/sig-peak"
 }

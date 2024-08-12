@@ -4,6 +4,8 @@ extension MPVPlayer.Options {
 
     public struct PlaybackControl {
 
+        private init() { }
+
         /// `--start=<relative time>`
         @Option.Double
         public static var start = "start"

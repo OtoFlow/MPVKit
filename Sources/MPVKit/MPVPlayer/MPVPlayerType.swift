@@ -17,4 +17,8 @@ public protocol PlayerType {
     func play()
 
     func pause()
+
+    func seek(to seconds: TimeInterval)
+
+    func seek(by seconds: TimeInterval)
 }
