@@ -10,7 +10,9 @@ open class MPVPlayer: PlayerType {
     public var metalLayer: MetalLayer? {
         didSet {
             if metalLayer != nil {
-                mpv_set_option(mpv, "wid", MPV_FORMAT_INT64, &metalLayer)
+                _ = withUnsafeMutablePointer(to: &metalLayer) { metalLayer in
+                    mpv_set_option(mpv, "wid", MPV_FORMAT_INT64, metalLayer)
+                }
             }
         }
     }
@@ -54,6 +56,10 @@ open class MPVPlayer: PlayerType {
 
     open func pause() {
         setProperty(.PlaybackControl.$pause, value: true)
+    }
+
+    open func stop() {
+        command.stop()
     }
 
     public func seek(to seconds: TimeInterval) {

@@ -33,6 +33,7 @@ extension MPVPlayer {
                 return strArgs
             }
 
+            @discardableResult
             public func callAsFunction() -> Int32 where Input == Void {
                 guard let mpv = player?.mpv else { return -1 }
 
@@ -47,6 +48,7 @@ extension MPVPlayer {
                 return mpv_command(mpv, &cargs)
             }
 
+            @discardableResult
             public func callAsFunction(_ argument: Input) -> Int32 where Input == String {
                 guard let mpv = player?.mpv else { return -1 }
 
@@ -61,6 +63,7 @@ extension MPVPlayer {
                 return mpv_command(mpv, &cargs)
             }
 
+            @discardableResult
             public func callAsFunction(_ arguments: [String]) -> Int32 where Input == Array<String> {
                 guard let mpv = player?.mpv else { return -1 }
 
@@ -75,6 +78,7 @@ extension MPVPlayer {
                 return mpv_command(mpv, &cargs)
             }
 
+            @discardableResult
             public func callAsFunction(_ arguments: String...) -> Int32 where Input == Array<String> {
                 self.callAsFunction(arguments)
             }
